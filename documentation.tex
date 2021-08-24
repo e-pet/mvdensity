@@ -1,0 +1,68 @@
+\documentclass{scrarticle}
+
+\usepackage[bibstyle=ieee, citestyle=numeric-comp, backend=biber, maxbibnames=4, minbibnames=1, mincitenames=1, maxcitenames=2, doi=true, sorting=nyt, eprint=false]{biblatex}
+
+% Print URL and EPRINT fields only if DOI not present, due to https://tex.stackexchange.com/a/424799/64293
+\DeclareSourcemap{
+	\maps[datatype=bibtex]{
+		\map[overwrite]{
+			\step[fieldsource=doi, final]
+			\step[fieldset=url, null]
+			\step[fieldset=eprint, null]
+		}  
+	}
+}
+
+\addbibresource{references.bib}
+
+\usepackage{amsmath}
+\usepackage{hyperref}
+\newcommand*{\nquery}{N^Q}
+\newcommand*{\nbin}{N^B}
+\newcommand*{\nsample}{N^S}
+\newcommand*{\e}{\mathrm{e}}
+
+\author{Eike Petersen, \href{mailto:eike.petersen@uni-luebeck.de}{eike.petersen@uni-luebeck.de}}
+\title{Efficient multivariate density estimation: \texttt{mvdensity}}
+
+\begin{document}
+	
+	\maketitle
+	
+	If a problem is multivariate, the number of samples is large, and the resulting density estimate must be evaluated efficiently at many points, density estimation is a nontrivial endeavor. 
+	To the author's knowledge, no efficient method is readily available in standard software packages.
+	Closest to the fulfillment of these requirements may be the fastKDE method~\cite{OBrien2016}, which performs highly efficient kernel density estimation (KDE) in the multivariate setting, but which, however, is inefficient in the evaluation on many query points.
+	(The evaluation complexity is $\mathcal{O}(\nquery\nsample)$, where $\nsample$ is the number of datapoints and $\nquery$ the number of query points.)
+	For these reasons, a simple custom method inspired by \textcite{Allison1993} is implemented here, which is described in the following.
+	
+	The pursued general approach, which is certainly far from new, is to simply smooth a multivariate histogram.
+	The histogram can be computed very efficiently, and the complexity of the smoothing operation then only depends on the number~$\nbin$ of histogram bins, \emph{not} the number of measured samples.
+	The resulting smoothed density surface can then be evaluated with complexity $\mathcal{O}(\nbin \nquery)$, which is sufficiently cheap.
+	There are two methods implemented to obtain a PDF estimation from the histogram: a) RBF-based smoothing, and b) simple interpolation.
+	In both cases, artificial boundary histogram bins with zero counts are first added to force the density surface estimate to decline towards zero outside of the histogram.
+	
+	\begin{description}
+	\item [RBF smoothing.] Radial basis function (RBF)-based smoothing~\cite{Fasshauer2007a} is easily and efficiently extensible to the multivariate setting.
+	First, the center points of the data within each bin are calculated.
+	Next, the \emph{significance} of each bin is calculated using the method proposed by \textcite{Allison1993}, and the most significant bins are selected based on a threshold.
+	The center points of all selected significant bins, all boundary bins, and the bin with the highest histogram count, are then used as the center points of the radial basis functions.\footnote{It is crucial that not \emph{all} bins are used as center points for RBFs: otherwise, we would perform interpolation, not smoothing.}
+	Multiquadric RBFs are used (as done in \textcite{Allison1993}), and the widths of the RBFs are chosen inversely proportional to the significance of the corresponding bin.
+	The weights of the RBFs are determined by solving a ridge-regularized linear least squares problem~\cite{Fasshauer2007a}
+	\item[Interpolation.] Interpolation is simply performed between the points specified by the geometrical center of each histogram bin and the corresponding count value. Different methods can be used, such as makima~\cite{Ionita2019} or linear interpolation.
+	\end{description}
+	Whereas the RBF method has various appealing properties and seems preferable in general, it has proven stubborn to tune such that it performs well across any dimension and number of datapoints. (Suggestions for improvements are very welcome!)
+	The most stable solution right now is thus to use the (makima) interpolation option.
+	
+	In both methods, to prevent potentially negative undershoots during the smoothing step and guarantee the (semi-)positivity of the resulting PDF estimate, the histogram counts are transformed using the inverse softplus function~\cite{Dugas2001}
+	\begin{equation*}
+		y=f^{-1}(x) = \log (\e^x-1).
+	\end{equation*}
+	Smoothing or interpolation is performed using these transformed data, and the resulting smoothed PDF estimate is transformed back using the softplus function~\cite{Dugas2001}
+	\begin{equation*}
+		f(y) = \log (1 + \e^y).
+	\end{equation*}
+	This guarantees the positivity of the resulting estimate, as was mentioned before.
+	Finally, to obtain a correctly normalized density estimate, the integral of the smoothed surface is estimated using a numerical integration scheme, and the smoothed surface is divided by this constant.
+
+	\printbibliography
+\end{document}
