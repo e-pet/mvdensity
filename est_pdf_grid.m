@@ -40,17 +40,17 @@ function pdf_handle = est_pdf_grid(data, nbin, exclusion_quantile, smoothing_met
         % tiles equal in each dimension, because I am not aware of any clever way to do this more
         % efficiently.
         % Rationale for the formula: in 1-D, I consider ~10 bins to be reasonable @ 1000 samples,
-        % and ~80 regions @ 100,000 samples. Also, nbin should grow _significantly sublinearly
+        % and ~50 regions @ 100,000 samples. Also, nbin should grow _significantly sublinearly
         % with nsample, so we choose nbin ~ log(nsample).
         % In particular, in 1-D, we choose nbin = a + b log(nsample), and by inserting the two
-        % above datapoints, we obtain a=-95 and b=15.
+        % above datapoints, we obtain a=-50 and b=8.6859.
         % Now, how to extend this to m-D? Of course, nregion = nbin^m. So what I first did is
         % nbin = (a + b log(nsample))^(1/m). But that grows _really_ slowly in higher dimensions,
         % e.g., in 5-D we still only have three histogram bins @ 1e6 datapoints. So I chose to scale
         % it with sqrt(m) instead of m, yielding the below formula.
         % Finally, the number of bins should always be at least 3, and the number of regions should
         % always be below 1 million.
-        nbin = min(max(3, floor(max((15*log(N)-95), 0)^(1/sqrt(m)))), floor(1e6^(1/m)));
+        nbin = min(max(3, floor(max((8.6859*log(N)-50), 0)^(1/sqrt(m)))), floor(1e6^(1/m)));
     end
     
     if nargin < 3 || isempty(exclusion_quantile)
