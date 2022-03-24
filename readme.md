@@ -6,3 +6,5 @@ For more details, see
 - the test examples implemented in run_pdf_examples.m
 
 -- Eike Petersen, August 2021
+
+The code has been developed while I was at the [University of Lübeck](https://www.uni-luebeck.de/en/university/university.html), with the [Institute for Electrical Engineering in Medicine](https://www.ime.uni-luebeck.de/institute.html).
